@@ -668,6 +668,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .triage-step-card, .triage-opt-btn { border-radius: 12px; }
 #map, #resp-map { border-radius: 12px; overflow: hidden; }
 .modal-content { border-radius: 16px; }
+.demo-notice {
+  display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 16px; background: #fff7df; border-bottom: 1px solid #f1d88e;
+  color: #684c12; font-size: .84rem; text-align: center;
+}
+.demo-notice strong { letter-spacing: .06em; font-size: .75rem; }
+.demo-notice a { color: #78350f; font-weight: 800; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
