@@ -12,24 +12,15 @@ import android.webkit.PermissionRequest;
 import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.net.Uri;
-import android.content.SharedPreferences;
-import android.app.AlertDialog;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.EditText;
-import android.widget.Toast;
-import android.widget.FrameLayout;
+import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private SharedPreferences preferences;
-    private static final String PREF_SERVER = "server_url";
+    private static final String SERVER_URL = "https://rapid-aid-xqvr.onrender.com/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        preferences = getSharedPreferences("rapidaid", MODE_PRIVATE);
 
         // Request runtime permissions if Android 6.0+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -83,52 +74,26 @@ public class MainActivity extends Activity {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    boolean audioAllowed = checkSelfPermission("android.permission.RECORD_AUDIO") == PackageManager.PERMISSION_GRANTED;
-                    if (audioAllowed) request.grant(request.getResources());
-                    else request.deny();
+                    ArrayList<String> allowed = new ArrayList<>();
+                    for (String resource : request.getResources()) {
+                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)
+                            && checkSelfPermission("android.permission.RECORD_AUDIO") == PackageManager.PERMISSION_GRANTED) {
+                            allowed.add(resource);
+                        }
+                        if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)
+                            && checkSelfPermission("android.permission.CAMERA") == PackageManager.PERMISSION_GRANTED) {
+                            allowed.add(resource);
+                        }
+                    }
+                    if (allowed.isEmpty()) request.deny();
+                    else request.grant(allowed.toArray(new String[0]));
                 }
             }
         });
 
         // Set full screen layout
         setContentView(webView);
-
-        String server = preferences.getString(PREF_SERVER, "");
-        if (server.isEmpty()) showServerDialog(); else connect(server);
-    }
-
-    @Override public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add("Change server");
-        return true;
-    }
-
-    @Override public boolean onOptionsItemSelected(MenuItem item) {
-        if ("Change server".contentEquals(item.getTitle())) { showServerDialog(); return true; }
-        return super.onOptionsItemSelected(item);
-    }
-
-    private void showServerDialog() {
-        final EditText input = new EditText(this);
-        input.setSingleLine(true);
-        input.setHint("http://192.168.1.10:3000");
-        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
-        input.setText(preferences.getString(PREF_SERVER, ""));
-        new AlertDialog.Builder(this)
-            .setTitle("Connect to RapidAid server")
-            .setMessage("Enter the address of the computer running RapidAid. Phone and computer should use the same network.")
-            .setView(input)
-            .setCancelable(false)
-            .setPositiveButton("Connect", (dialog, which) -> connect(input.getText().toString().trim()))
-            .setNegativeButton("Exit", (dialog, which) -> finish())
-            .show();
-    }
-
-    private void connect(String server) {
-        if (!server.startsWith("http://") && !server.startsWith("https://")) server = "http://" + server;
-        while (server.endsWith("/")) server = server.substring(0, server.length() - 1);
-        if (server.length() < 9) { Toast.makeText(this, "Enter a valid server address", Toast.LENGTH_LONG).show(); showServerDialog(); return; }
-        preferences.edit().putString(PREF_SERVER, server).apply();
-        webView.loadUrl(server);
+        webView.loadUrl(SERVER_URL);
     }
 
     @Override
@@ -136,7 +101,7 @@ public class MainActivity extends Activity {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
-            showServerDialog();
+            super.onBackPressed();
         }
     }
 }

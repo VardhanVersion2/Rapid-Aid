@@ -98,7 +98,7 @@ RapidAid 2.0 connects patients and medical dispatchers through two synchronized 
 
 ### Android APK
 
-The Android app is a native Java WebView shell that loads the same responsive interface from the running RapidAid server. This keeps the browser and APK on one frontend and one backend. On first launch, enter the server computer's LAN address, such as `http://192.168.1.10:3000`; keep the phone and computer on the same network and allow the server port through the computer firewall. The APK remembers this address. Press Back from the home page to change it. Use `build_apk.ps1` to rebuild `RapidAid.apk` after frontend or Android changes. The APK uses a debug signing key for project/demo installation.
+The Android app is a native Java WebView shell that loads the same responsive interface from the deployed RapidAid server. The APK connects automatically to the HTTPS demo at `https://rapid-aid-xqvr.onrender.com/`; it does not need a local server address or a shared Wi-Fi network. Use `build_apk.ps1` to rebuild `RapidAid.apk` after frontend or Android changes. The APK uses a debug signing key for project/demo installation.
 
 ## 5. Container Deployment
 
