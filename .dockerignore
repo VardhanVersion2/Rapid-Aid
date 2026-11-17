@@ -1,0 +1,12 @@
+.env
+.git
+node_modules
+android
+uploads
+data
+tests
+*.apk
+*.idsig
+*.pdf
+*.keystore
+*.py

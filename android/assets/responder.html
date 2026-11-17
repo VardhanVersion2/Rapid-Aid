@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RapidAid CAD — National Emergency Dispatch Terminal</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body style="background: #0b132b; color: #f8fafc;">
+
+  <!-- ==================== CAD CONSOLE HEADER ==================== -->
+  <header class="cad-header">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 1.5rem;">🏥</span>
+      <div>
+        <div style="font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">
+          EMERGENCY MEDICAL DISPATCH COMMAND (EMS-CAD)
+        </div>
+        <div style="font-size: 0.72rem; color: #94a3b8; letter-spacing: 1px;">
+          MINISTRY OF HEALTH & FAMILY WELFARE • EMERGENCY RESPONSE SYSTEM
+        </div>
+      </div>
+      <span class="cad-badge" style="margin-left: 8px;">TERMINAL ACTIVE</span>
+    </div>
+
+    <div class="header-actions">
+      <!-- Live Digital Clock -->
+      <div id="cad-clock" style="font-family: monospace; font-size: 0.92rem; font-weight: 700; color: #38bdf8;">
+        --:--:--
+      </div>
+      <a href="/" class="nav-link" style="color: #94a3b8;">← Caller App</a>
+      <span id="resp-user-pill" style="color: #cbd5e1; font-size: 0.85rem; font-weight: 600;"></span>
+      <button id="resp-logout-btn" class="btn-alt btn-sm hide" onclick="responderLogout()">Logout</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1280px; padding: 14px;">
+
+    <!-- Responder Login & Facility Provisioning Card -->
+    <div id="resp-auth-section" class="card hide" style="max-width: 520px; margin: 40px auto; color: var(--text);">
+      <div class="card-header">
+        <h2 class="card-title">Hospital Dispatch Authentication</h2>
+        <div class="row" style="flex: 0; min-width: 180px;">
+          <button id="rtab-login" class="btn-primary btn-sm" onclick="setResponderAuthTab('login')">Login</button>
+          <button id="rtab-reg" class="btn-alt btn-sm" onclick="setResponderAuthTab('reg')">Register Hospital</button>
+        </div>
+      </div>
+
+      <div id="resp-reg-fields" class="hide">
+        <label for="resp-name">Dispatcher Officer Name</label>
+        <input id="resp-name" type="text" placeholder="e.g. Dr. Anand Verma / Dispatcher 04" />
+
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+          <h4 style="margin-bottom: 8px; color: var(--navy);">Facility Information</h4>
+          
+          <label for="fac-name">Hospital / Trauma Center Name</label>
+          <input id="fac-name" type="text" placeholder="e.g. District Civil Trauma Hospital" />
+
+          <div class="row">
+            <div>
+              <label for="fac-type">Service Type</label>
+              <select id="fac-type">
+                <option value="hospital">Trauma Care Hospital</option>
+                <option value="clinic">Emergency Clinic</option>
+                <option value="ambulance">Mobile Ambulance Fleet</option>
+              </select>
+            </div>
+            <div>
+              <label for="fac-phone">Emergency Hotline</label>
+              <input id="fac-phone" type="tel" placeholder="e.g. +919876543210" />
+            </div>
+          </div>
+
+          <label for="fac-address">Physical Facility Address</label>
+          <input id="fac-address" type="text" placeholder="e.g. Sector 5, Medical Enclave" />
+
+          <div class="row">
+            <div>
+              <label for="fac-lat">Latitude</label>
+              <input id="fac-lat" type="number" step="any" placeholder="26.4600" />
+            </div>
+            <div>
+              <label for="fac-lng">Longitude</label>
+              <input id="fac-lng" type="number" step="any" placeholder="80.3300" />
+            </div>
+          </div>
+          <button class="btn btn-alt btn-sm w-full" style="margin-top: 6px;" onclick="useCurrentLocationForFacility()">
+            📍 Set Base Coordinates from Device GPS
+          </button>
+        </div>
+      </div>
+
+      <label for="resp-phone">Dispatcher Mobile / Username</label>
+      <input id="resp-phone" type="tel" placeholder="e.g. +919876543210" autocomplete="tel" />
+
+      <label for="resp-password">Password</label>
+      <input id="resp-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+
+      <button id="resp-auth-submit" class="btn-primary w-full" style="margin-top: 8px;" onclick="handleResponderAuthSubmit()">
+        Authenticate into CAD Terminal
+      </button>
+    </div>
+
+    <!-- Responder Command Dashboard -->
+    <div id="resp-dashboard" class="hide">
+
+      <!-- Top Facility Status Bar -->
+      <div style="background: #1c2541; border: 1px solid #334155; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h2 id="facility-name-display" style="font-size: 1.25rem; color: #ffffff; margin: 0;">Medical Facility</h2>
+              <span class="badge badge-verified" id="facility-type-tag">TRAUMA CENTER</span>
+            </div>
+            <div id="facility-meta-display" style="font-size: 0.85rem; color: #94a3b8; margin-top: 2px;">Address • Emergency Phone</div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button id="avail-toggle-btn" class="status-toggle btn-success" onclick="toggleResponderAvailability()">
+            <span id="avail-dot">🟢</span>
+            <span id="avail-text">ONLINE (ACCEPTING DISPATCHES)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Operational Layout -->
+      <div class="grid-2" style="grid-template-columns: 1.4fr 1fr; gap: 14px;">
+
+        <!-- Left Column: Active Incidents Stream -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="color: #f8fafc; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+              <span>🚨</span>
+              <span>Live Emergency Incident Queue</span>
+            </h3>
+            <button class="btn btn-outline btn-sm" style="color: #cbd5e1; border-color: #475569;" onclick="loadResponderAlerts()">
+              🔄 Refresh Queue
+            </button>
+          </div>
+
+          <div id="alerts-container">
+            <p style="color: #94a3b8;">Monitoring real-time telemetry stream via Server-Sent Events...</p>
+          </div>
+        </div>
+
+        <!-- Right Column: GIS Telemetry Radar & Incident Log -->
+        <div>
+          <!-- Radar Map Card -->
+          <div style="background: #1c2541; border: 1px solid #334155; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+            <h4 style="color: #f8fafc; margin-bottom: 8px; font-size: 0.95rem;">📍 Geographic Incident Radar</h4>
+            <div id="resp-map" style="height: 300px; border-radius: 6px;"></div>
+          </div>
+
+          <!-- Handled Incident Log -->
+          <div style="background: #1c2541; border: 1px solid #334155; border-radius: 8px; padding: 14px;">
+            <h4 style="color: #f8fafc; margin-bottom: 8px; font-size: 0.95rem;">📜 Facility Case Archive</h4>
+            <div id="resp-history-container" style="max-height: 340px; overflow-y: auto;">
+              <p style="color: #94a3b8; font-size: 0.85rem;">No historical cases archived.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Photo Modal Viewer -->
+  <div id="photo-modal" class="modal-overlay hide" onclick="closePhotoModal()">
+    <div class="modal-content" style="max-width: 680px; text-align: center; background: #000;" onclick="event.stopPropagation()">
+      <div style="display: flex; justify-content: flex-end; padding-bottom: 8px;">
+        <button class="btn btn-alt btn-sm" onclick="closePhotoModal()">✕ Close</button>
+      </div>
+      <img id="photo-modal-img" src="" alt="Accident Photo" style="max-width: 100%; max-height: 75vh; border-radius: 6px;" />
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast" class="hide"></div>
+
+  <!-- Leaflet & Responder Script -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/responder.js"></script>
+</body>
+</html>

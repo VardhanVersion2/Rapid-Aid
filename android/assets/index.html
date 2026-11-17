@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RapidAid 2.0 — Emergency Medical Assistance</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+
+  <!-- ==================== PROFESSIONAL MEDICAL LOADING SCREEN ==================== -->
+  <div id="splash-screen">
+    <div class="splash-icon">🚑</div>
+    <div class="splash-title">RAPIDAID 2.0</div>
+    <div class="splash-subtitle">Emergency Medical Response Network</div>
+    
+    <!-- Heartbeat ECG Pulse Loader -->
+    <div class="ecg-loader">
+      <svg class="ecg-svg" viewBox="0 0 100 20">
+        <path d="M0,10 L30,10 L35,2 L40,18 L45,6 L50,14 L55,10 L100,10" />
+      </svg>
+    </div>
+    <div class="splash-status" id="splash-status-text">INITIALIZING SATELLITE GPS LINK...</div>
+  </div>
+
+  <!-- Global Header -->
+  <header>
+    <a href="/" class="brand">
+      <span>🚑</span>
+      <span>RapidAid 2.0</span>
+      <span class="badge badge-code-red" style="font-size: 0.65rem;">EMS ACTIVE</span>
+    </a>
+    <div class="header-actions">
+      <a href="/responder.html" class="nav-link">🏥 Hospital Dispatch</a>
+      <span id="user-pill" class="text-muted" style="color: #cbd5e1; font-size: 0.88rem;"></span>
+      <button id="logout-btn" class="btn-alt btn-sm hide" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Authentication Card (When logged out) -->
+    <div id="auth-section" class="card hide">
+      <div class="card-header">
+        <h2 class="card-title">Patient / Caller Authentication</h2>
+        <div class="row" style="flex: 0; min-width: 180px;">
+          <button id="tab-login" class="btn-primary btn-sm" onclick="setAuthTab('login')">Login</button>
+          <button id="tab-reg" class="btn-alt btn-sm" onclick="setAuthTab('reg')">Register</button>
+        </div>
+      </div>
+
+      <div id="reg-fields" class="hide">
+        <label for="reg-name">Full Name</label>
+        <input id="reg-name" type="text" placeholder="e.g. Rahul Sharma" autocomplete="name" />
+      </div>
+
+      <label for="auth-phone">Mobile Phone Number</label>
+      <input id="auth-phone" type="tel" placeholder="e.g. +919876543210" autocomplete="tel" />
+
+      <label for="auth-password">Password</label>
+      <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+
+      <button id="auth-submit" class="btn-primary w-full" style="margin-top: 8px;" onclick="handleAuthSubmit()">Login</button>
+      <p class="text-muted" style="margin-top: 12px; text-align: center;">
+        Hospital / Ambulance dispatcher? 
+        <a href="/responder.html" style="color: var(--primary); font-weight: 600;">Open Medical Dispatch Terminal &rarr;</a>
+      </p>
+    </div>
+
+    <!-- User Dashboard (When logged in) -->
+    <div id="user-dashboard" class="hide">
+
+      <!-- Active Emergency Live Tracker (Visible when active) -->
+      <div id="active-alert-box" class="card hide" style="border-left: 6px solid var(--danger); background: #fffdfd;">
+        <div class="card-header">
+          <h3 class="card-title" id="alert-status-title">🚨 Emergency Broadcast Active</h3>
+          <span id="alert-status-badge" class="badge badge-sent">DISPATCH PENDING</span>
+        </div>
+        <div id="alert-status-desc" style="font-size: 1.05rem; font-weight: 600; margin-bottom: 8px;">
+          Transmitting live telemetry to nearest available hospital dispatchers...
+        </div>
+
+        <!-- Clinical Triage Summary Banner -->
+        <div id="alert-triage-display" class="triage-banner hide">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong id="alert-triage-code" style="font-size: 1rem;">CODE RED - CRITICAL</strong>
+            <span class="badge" id="alert-triage-tag">PRIORITY 1</span>
+          </div>
+          <div id="alert-triage-guidance" style="margin-top: 6px; font-size: 0.9rem;"></div>
+        </div>
+        
+        <div id="alert-facility-info" class="card hide" style="background: #f0fdf4; border-color: #86efac; margin: 12px 0 8px 0; padding: 12px;">
+          <!-- Responding facility details populated dynamically -->
+        </div>
+
+        <div class="row" style="margin-top: 12px;">
+          <a id="call-facility-btn" class="btn btn-success hide" href="#">📞 Call Responding Hospital</a>
+          <a class="btn btn-danger" href="tel:112">📞 Call 112</a>
+          <button class="btn btn-alt" onclick="cancelActiveAlert()">I'm Safe / Cancel Alert</button>
+        </div>
+      </div>
+
+      <!-- Hero SOS Section -->
+      <div class="card" style="text-align: center; padding: 22px 16px;">
+        <button id="sos-btn" onclick="openSosModal()">
+          <span>🆘</span>
+          <span>EMERGENCY SOS</span>
+        </button>
+        <p class="text-muted" style="margin-top: 10px; font-weight: 500;">
+          One-tap emergency broadcast. Dispatches verified GPS, category, and AI clinical triage report to closest trauma units.
+        </p>
+
+        <!-- Fast Emergency Hotline Buttons -->
+        <div class="row" style="margin-top: 12px;">
+          <a href="tel:112" class="btn btn-alt" style="border: 1px solid #cbd5e1;">📞 National Emergency 112</a>
+          <a href="tel:108" class="btn btn-alt" style="border: 1px solid #cbd5e1;">🚑 Medical Ambulance 108</a>
+        </div>
+      </div>
+
+      <!-- Emergency Category & Quick One-Tap Triage -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">1. Emergency Category</h3>
+        </div>
+        
+        <div class="row" style="margin-bottom: 10px;">
+          <button class="btn btn-outline" id="btn-cat-accident" onclick="selectCategory('Road Accident')">🚗 Road Accident</button>
+          <button class="btn btn-outline" id="btn-cat-injury" onclick="selectCategory('Injury')">🩹 Severe Injury</button>
+          <button class="btn btn-outline" id="btn-cat-breathing" onclick="selectCategory('Breathing Difficulty')">🫁 Breathing / Choking</button>
+          <button class="btn btn-outline" id="btn-cat-cardiac" onclick="selectCategory('Medical Emergency')">❤️ Cardiac / Stroke</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="openTriageQuestionsModal()">
+            <span>📋</span>
+            <span>Answer 4 Quick AI Triage Questions (Fast Protocol)</span>
+          </button>
+          <span class="text-muted" style="font-size: 0.8rem;">Auto-generates clinical assessment for responders</span>
+        </div>
+      </div>
+
+      <!-- AI Panic Voice Assistant & Photo -->
+      <div class="card" style="border-left: 4px solid var(--primary);">
+        <div class="card-header">
+          <h3 class="card-title">
+            <span>🎙️</span>
+            <span>2. AI Voice Assistant (Hindi / English / Hinglish)</span>
+          </h3>
+          <span class="badge badge-accepted">Speech-to-Text + Gemini</span>
+        </div>
+        
+        <p class="text-muted">
+          Speak naturally in Hindi or English. RapidAid transcribes audio and synthesizes a structured triage briefing for the hospital.
+        </p>
+
+        <!-- Audio Recording Controls -->
+        <div class="row" style="align-items: center;">
+          <button id="record-btn" class="btn btn-danger" onclick="toggleVoiceRecording()">
+            <span id="record-icon">⏺️</span>
+            <span id="record-btn-text">Record Emergency Voice Note</span>
+          </button>
+          <span id="record-timer" style="font-weight: 700; font-family: monospace; font-size: 1.1rem;" class="hide">00:00</span>
+          <button id="rerecord-btn" class="btn btn-outline btn-sm hide" onclick="resetVoiceRecording()">Discard & Re-record</button>
+        </div>
+
+        <div id="audio-preview-container" class="hide" style="margin-top: 10px;">
+          <audio id="audio-preview" controls style="width: 100%;"></audio>
+        </div>
+
+        <!-- Scene Photo Attachment -->
+        <div style="margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px;">
+          <label for="accident-photo-input">📷 Optional Accident Scene / Injury Photo:</label>
+          <input type="file" id="accident-photo-input" accept="image/*" onchange="handlePhotoSelect(event)" />
+          <div id="photo-preview-wrap" class="hide">
+            <img id="photo-preview-img" style="max-height: 200px; border-radius: 8px; margin-top: 6px;" alt="Scene Preview" />
+            <button class="btn btn-alt btn-sm" onclick="clearSelectedPhoto()">Remove Photo</button>
+          </div>
+        </div>
+
+        <!-- Editable AI Summary Confirmation Card -->
+        <div id="ai-review-card" class="card hide" style="background: #f8fafc; margin-top: 14px;">
+          <div class="card-header">
+            <h4>📋 AI Structured Emergency Briefing</h4>
+            <span id="ai-status-tag" class="badge badge-accepted">Review & Confirm</span>
+          </div>
+          
+          <label>Spoken Transcript:</label>
+          <textarea id="summary-transcript" rows="2"></textarea>
+
+          <label>Reported Symptoms & Injuries:</label>
+          <textarea id="summary-symptoms" rows="2"></textarea>
+
+          <label>Responder Action Brief:</label>
+          <textarea id="summary-responder" rows="2"></textarea>
+
+          <div class="row" style="margin-top: 10px;">
+            <button class="btn btn-success" onclick="confirmAiSummary()">✅ Transmit Briefing to Hospital</button>
+            <button class="btn btn-alt" onclick="regenerateAiSummary()">🔄 Regenerate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live GPS & Interactive Map -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">📍 Live GPS Radar & Responders</h3>
+          <span id="gps-status-badge" class="badge badge-accepted">GPS ACTIVE</span>
+        </div>
+        <div id="map"></div>
+        <div id="gps-coords-text" class="text-muted" style="margin-top: 6px; font-size: 0.82rem;">
+          Acquiring high-accuracy satellite coordinates...
+        </div>
+      </div>
+
+      <!-- Nearby Facilities Directory -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🏥 Nearby Medical Facilities</h3>
+        </div>
+        <div id="nearby-list">
+          <p class="text-muted">Searching for verified emergency response centers within 50 km...</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ==================== 4-QUESTION AI EMERGENCY TRIAGE MODAL ==================== -->
+  <div id="triage-modal" class="modal-overlay hide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="color: var(--danger);">📋 Rapid Clinical Triage (4 Questions)</h3>
+        <button class="btn btn-alt btn-sm" onclick="closeTriageModal()">✕</button>
+      </div>
+      <p class="text-muted" style="font-size: 0.88rem; margin-bottom: 12px;">
+        Answer these 4 rapid clinical questions to help responders prepare life support gear before arriving on scene:
+      </p>
+
+      <!-- Question 1: Consciousness & Airway -->
+      <div class="triage-step-card">
+        <strong>1. Is the patient awake and breathing?</strong>
+        <div class="triage-option-grid" id="triage-q1">
+          <button class="triage-opt-btn" onclick="selectTriageOption('q1', 'Conscious & breathing normally', this)">
+            <span>🟢 Conscious & breathing normally</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q1', 'In and out of consciousness', this)">
+            <span>🟡 Drowsy / In and out of consciousness</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q1', 'Unconscious but breathing', this)">
+            <span>🔴 Unconscious but breathing</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q1', 'Not breathing / Gasping', this)">
+            <span>🚨 NOT BREATHING / Gasping for air</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Question 2: Bleeding & Trauma -->
+      <div class="triage-step-card">
+        <strong>2. Is there severe bleeding or traumatic bone injury?</strong>
+        <div class="triage-option-grid" id="triage-q2">
+          <button class="triage-opt-btn" onclick="selectTriageOption('q2', 'Heavy arterial bleeding', this)">
+            <span>🩸 Severe / Gushing arterial blood loss</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q2', 'Visible compound fracture', this)">
+            <span>🦴 Suspected broken bone / Head injury</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q2', 'Minor abrasions / Controlled bleeding', this)">
+            <span>🩹 Controlled bleeding / Minor wounds</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q2', 'No visible bleeding', this)">
+            <span>⚪ No visible bleeding or trauma</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Question 3: Cardiac / Stroke -->
+      <div class="triage-step-card">
+        <strong>3. Are there cardiac or stroke warning signs?</strong>
+        <div class="triage-option-grid" id="triage-q3">
+          <button class="triage-opt-btn" onclick="selectTriageOption('q3', 'Severe chest tightness & sweating', this)">
+            <span>💔 Severe crushing chest pain & sweating</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q3', 'Acute shortness of breath', this)">
+            <span>🫁 Acute shortness of breath / Wheezing</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q3', 'Facial drooping / speech slurred', this)">
+            <span>🧠 Facial drooping / Arm weakness / Slurred speech</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q3', 'None of these symptoms', this)">
+            <span>⚪ None of these symptoms</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Question 4: Scene & Victims -->
+      <div class="triage-step-card">
+        <strong>4. How many victims, and is the scene hazardous?</strong>
+        <div class="triage-option-grid" id="triage-q4">
+          <button class="triage-opt-btn" onclick="selectTriageOption('q4', 'Single patient, scene secure', this)">
+            <span>👤 Single patient, scene safe</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q4', 'Multiple victims injured', this)">
+            <span>👥 Multiple victims injured</span>
+          </button>
+          <button class="triage-opt-btn" onclick="selectTriageOption('q4', 'Active hazard (traffic / fire / wire)', this)">
+            <span>⚠️ Active Hazard: Heavy traffic, fire, or live electricity</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 18px;">
+        <button class="btn btn-danger" onclick="submitTriageAssessment()">
+          ⚡ Submit Triage & Transmit to Hospital
+        </button>
+        <button class="btn btn-alt" onclick="closeTriageModal()">Skip / Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOS Confirmation Modal -->
+  <div id="sos-modal" class="modal-overlay hide">
+    <div class="modal-content" style="text-align: center;">
+      <div class="modal-header">
+        <h3 style="color: var(--danger);">🚨 Confirm Emergency Broadcast</h3>
+        <button class="btn btn-alt btn-sm" onclick="closeSosModal()">✕</button>
+      </div>
+      <p style="font-size: 1.05rem;">
+        Broadcasting distress alert with verified GPS coordinates to closest trauma hospitals:
+      </p>
+      <div id="sos-countdown-display" style="font-size: 2.8rem; font-weight: 800; color: var(--danger); margin: 12px 0;">5</div>
+      <p id="sos-selected-type" style="font-weight: 700; color: var(--navy);"></p>
+      
+      <div class="row" style="margin-top: 16px;">
+        <button class="btn btn-danger" onclick="triggerSosNow()">Transmit Immediately</button>
+        <button class="btn btn-alt" onclick="closeSosModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="hide"></div>
+
+  <!-- Leaflet JS & App Client Logic -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

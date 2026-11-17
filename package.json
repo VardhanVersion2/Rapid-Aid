@@ -1,0 +1,27 @@
+{
+  "name": "rapidaid",
+  "version": "2.0.0",
+  "description": "RapidAid 2.0 - Emergency Medical Assistance Platform with AI Voice Summarization",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js && node tests/test_suite.js",
+    "test:original": "node test.js",
+    "test:suite": "node tests/test_suite.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "emergency",
+    "medical-assistance",
+    "server-sent-events",
+    "ai-voice",
+    "gemini",
+    "openai-transcription",
+    "leaflet",
+    "geolocation"
+  ],
+  "author": "RapidAid Team",
+  "license": "MIT"
+}
