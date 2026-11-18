@@ -114,9 +114,11 @@ Rapid aid/
 ├── server.js               # Central HTTP server, custom router, auth, SSE & AI endpoints
 ├── package.json            # Node.js project configuration and test commands
 ├── .env.example            # Environment variables template
-├── .gitignore              # Ignores .env and temporary upload files
+├── .gitignore              # Ignores local configuration, uploads, and build output
 ├── README.md               # Complete project documentation & setup manual
-├── VIVA.md                 # 30+ College Viva questions and detailed answers
+├── build_apk.ps1           # Builds the Android WebView APK
+├── Dockerfile              # Container image definition
+├── compose.yaml            # Local container setup
 │
 ├── public/                 # Static web assets served to clients
 │   ├── index.html          # User / Patient Emergency Application
@@ -126,7 +128,7 @@ Rapid aid/
 │   └── responder.js        # Responder terminal client logic (SSE Alerts, Dispatch)
 │
 ├── data/
-│   └── db.json             # Atomic serialized JSON database file
+│   └── db.json             # Runtime database (created locally; not committed)
 │
 ├── uploads/                # Protected media directory (NOT statically served!)
 │   ├── audio/              # Voice recording audio files (.webm, .wav)
@@ -135,6 +137,8 @@ Rapid aid/
 └── tests/
     └── test_suite.js       # 46 automated integration tests covering all requirements
 ```
+
+The `android/` directory contains the Android manifest, Java source, resources, and bundled web assets. Compiled classes, generated resources, APKs, and signing keys are build outputs and are not kept in the source tree.
 
 ---
 
@@ -296,3 +300,4 @@ node test.js && node tests/test_suite.js
 1. **Turn-by-Turn Routing**: Integrate Open Source Routing Machine (OSRM) for live route geometry on Leaflet.
 2. **SMS Gateway Integration**: Automatically trigger Twilio or Fast2SMS alerts to emergency contacts.
 3. **Wearable IoT Sync**: Connect smartwatches to trigger SOS automatically on high G-force crash detection or severe heart rate drops.
+
